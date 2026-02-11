@@ -98,7 +98,7 @@ def extract_travel_info(text):
             
             # Check for "Flight Destination" (para, ir, viajar)
             # Often 'para' is the head or a preposition child
-            elif head.text.lower() in ["para", "ir", "viagem", "destino"]:
+            elif head.text.lower() in ["para", "ir", "viagem", "destino","viajar"]:
                 if travel_info["Flight Destination"] is None:
                      travel_info["Flight Destination"] = ent.text
             
