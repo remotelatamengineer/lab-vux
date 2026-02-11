@@ -52,6 +52,13 @@ def extract_travel_info(text):
     """
     Extracts travel details (Origin, Destination, Booking City, Dates) from the text.
     """
+    travel_info = {
+        "Flight From": None,
+        "Flight Destination": None,
+        "Booking City": None,
+        "Date From": None,
+        "Date To": None
+    }
     try:
         nlp = spacy.load("pt_core_news_lg")
     except OSError:
@@ -79,14 +86,7 @@ def extract_travel_info(text):
 
     doc = nlp(text)
 
-    travel_info = {
-        "Flight From": None,
-        "Flight Destination": None,
-        "Booking City": None,
-        "Date From": None,
-        "Date To": None
-    }
-
+ 
     for ent in doc.ents:
         if ent.label_ in ["LOC", "GPE"]:
             # Check dependency parse for context
@@ -104,16 +104,9 @@ def extract_travel_info(text):
             
             # Check for "Booking City" (hotel, ficar, em)
             # Logic: Look for "hotel" or "ficar" in the same sentence or dependency chain
-            elif head.text.lower() in ["hospedado", "em", "no", "na"]:
-                 grand_head = head.head
-                 if grand_head.text.lower() in ["ficar", "hotel", "hospedar", "estar", "hospedagem"]:
+            elif head.text.lower() in ["hospedado", "em", "no", "na","ficar", "hotel", "hospedar", "estar", "hospedagem"]:
+                 if travel_info["Booking City"] is None:
                       travel_info["Booking City"] = ent.text
-            
-            # Fallback/Relaxed check for Booking City: if "hotel" or "vassouras" is distinct
-            if travel_info["Booking City"] is None and ent.text.lower() == "vassouras": # Specific hack/heuristic or context check
-                # Check if "hotel" is in the sentence
-                if "hotel" in ent.sent.text.lower():
-                    travel_info["Booking City"] = ent.text
 
         elif ent.label_ == "DATE":
             # If we have a vague date like "próximo mês", overwrite it
@@ -123,13 +116,17 @@ def extract_travel_info(text):
             elif travel_info["Date To"] is None:
                 travel_info["Date To"] = parsed_val
              
-
     # Print extracted info
     print("-" * 30)
     print("Extracted Travel Information:")
     print("-" * 30)
     for key, value in travel_info.items():
-        print(f"{key}: {value}")
+        if value is not None:
+            print(f"{key}: {value}")
+        else:
+            input(f"{key} is not clear, please provide the value: ")
+
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

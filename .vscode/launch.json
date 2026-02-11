@@ -6,7 +6,7 @@
             "request": "launch",
             "program": "${file}",
             "args": [
-                "prompt3.txt"
+                "prompt4.txt"
             ]
         }
     ]
