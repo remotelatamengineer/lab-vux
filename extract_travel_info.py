@@ -65,9 +65,8 @@ def extract_travel_info(text):
         print("Model not found. Please run: python -m spacy download pt_core_news_lg")
         return
 
-    # Add EntityRuler for better date extraction
+    # Add EntityRuler for better date and location extraction
     ruler = nlp.add_pipe("entity_ruler", before="ner")
-    # ... patterns omitted for brevity, logic remains same ...
     patterns = [
         {"label": "DATE", "pattern": [{"LOWER": "próximo"}, {"LOWER": "mês"}]},
         {"label": "DATE", "pattern": [{"LOWER": "semana"}, {"LOWER": "que"}, {"LOWER": "vem"}]},
@@ -80,7 +79,10 @@ def extract_travel_info(text):
             {"IS_DIGIT": True},
             {"LOWER": "de"},
             {"LOWER": {"IN": ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]}}
-        ]}
+        ]},
+        # Location patterns for missed entities
+        {"label": "LOC", "pattern": [{"LOWER": "cidade"}, {"LOWER": "de"}, {"IS_TITLE": True}]},
+        {"label": "LOC", "pattern": [{"LOWER": "aeroporto"}, {"LOWER": "de"}, {"IS_TITLE": True}]}
     ]
     ruler.add_patterns(patterns)
 
@@ -89,22 +91,21 @@ def extract_travel_info(text):
  
     for ent in doc.ents:
         if ent.label_ in ["LOC", "GPE"]:
-            # Check dependency parse for context
-            head = ent.root.head
+            # Check ancestors for context
+            ancestors_text = [anc.text.lower() for anc in ent.root.ancestors]
+            
             # Check for "Flight From" (saindo de, voar de)
-            if head.text.lower() in ["embarcar", "saindo", "partindo", "origem", "de"]:
+            if any(kw in ancestors_text for kw in ["embarcar", "saindo", "partindo", "origem", "de"]):
                  if travel_info["Flight From"] is None:
                     travel_info["Flight From"] = ent.text
             
             # Check for "Flight Destination" (para, ir, viajar)
-            # Often 'para' is the head or a preposition child
-            elif head.text.lower() in ["para", "ir", "viagem", "destino","viajar"]:
+            elif any(kw in ancestors_text for kw in ["para", "ir", "viagem", "destino", "viajar"]):
                 if travel_info["Flight Destination"] is None:
                      travel_info["Flight Destination"] = ent.text
             
             # Check for "Booking City" (hotel, ficar, em)
-            # Logic: Look for "hotel" or "ficar" in the same sentence or dependency chain
-            elif head.text.lower() in ["hospedado", "em", "no", "na","ficar", "hotel", "hospedar", "estar", "hospedagem"]:
+            elif any(kw in ancestors_text for kw in ["hospedado", "em", "no", "na", "ficar", "hotel", "hospedar", "estar", "hospedagem"]):
                  if travel_info["Booking City"] is None:
                       travel_info["Booking City"] = ent.text
 
