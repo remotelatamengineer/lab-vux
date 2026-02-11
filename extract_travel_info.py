@@ -91,23 +91,27 @@ def extract_travel_info(text):
  
     for ent in doc.ents:
         if ent.label_ in ["LOC", "GPE"]:
-            # Check ancestors for context
-            ancestors_text = [anc.text.lower() for anc in ent.root.ancestors]
-            
+            # Check dependency parse for context
+            head = ent.root.head
+            if head.dep_ == "pobj":
+                head = head.head
+                
             # Check for "Flight From" (saindo de, voar de)
-            if any(kw in ancestors_text for kw in ["embarcar", "saindo", "partindo", "origem", "de"]):
+            if head.text.lower() in ["embarcar", "saindo", "partindo", "origem", "de"]:
                  if travel_info["Flight From"] is None:
-                    travel_info["Flight From"] = ent.text
+                    travel_info["Flight From"] = ent.text.replace("cidade de ", "")
             
             # Check for "Flight Destination" (para, ir, viajar)
-            elif any(kw in ancestors_text for kw in ["para", "ir", "viagem", "destino", "viajar"]):
+            # Often 'para' is the head or a preposition child
+            elif head.text.lower() in ["para", "ir", "viagem", "destino","viajar"]:
                 if travel_info["Flight Destination"] is None:
-                     travel_info["Flight Destination"] = ent.text
+                     travel_info["Flight Destination"] = ent.text.replace("cidade de ", "")
             
             # Check for "Booking City" (hotel, ficar, em)
-            elif any(kw in ancestors_text for kw in ["hospedado", "em", "no", "na", "ficar", "hotel", "hospedar", "estar", "hospedagem"]):
+            # Logic: Look for "hotel" or "ficar" in the same sentence or dependency chain
+            elif head.text.lower() in ["hospedado", "em", "no", "na","ficar", "hotel", "hospedar", "estar", "hospedagem"]:
                  if travel_info["Booking City"] is None:
-                      travel_info["Booking City"] = ent.text
+                      travel_info["Booking City"] = ent.text.replace("cidade de ", "")
 
         elif ent.label_ == "DATE":
             # If we have a vague date like "próximo mês", overwrite it
